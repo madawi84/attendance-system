@@ -1,7 +1,7 @@
 # Import base user functionality from Django
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
+from companies.models import Company  # Import Company model for foreign key relationship
 
 '''
 This file contains the custom user model for the attendance system.
@@ -23,7 +23,14 @@ class User(AbstractUser):
     is_manager = models.BooleanField(default=False)     # For company managers
     is_supervisor = models.BooleanField(default=False)  # For team supervisors
 
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True) # Foreign key to Company model
+
+
     # What will be shown when printing or listing a user instance
     def __str__(self):
         return self.username  # e.g., for admin display or logs
+    
+
+
 
