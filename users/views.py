@@ -19,6 +19,6 @@ class UserListView(APIView):
 
     def get(self, request):
         print("HR flag =", request.user.is_hr)
-        users = User.objects.all()
+        users = User.objects.filter(company=request.user.company)
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
