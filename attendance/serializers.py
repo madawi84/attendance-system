@@ -1,6 +1,19 @@
 from rest_framework import serializers
-from .models import CheckInRecord
+from companies.models import Company
+from .models import CheckInRecord, Location
 
+# ── HR creates new work-site ──────────────────────────
+class LocationSerializer(serializers.ModelSerializer):
+    company = serializers.SlugRelatedField(
+        slug_field='name',
+        queryset=Company.objects.all()
+    )
+
+    class Meta:
+        model = Location
+        fields = '__all__'
+
+# ── Employee check-in request ─────────────────────────
 class CheckInSerializer(serializers.Serializer):
     latitude  = serializers.DecimalField(max_digits=9, decimal_places=6)
     longitude = serializers.DecimalField(max_digits=9, decimal_places=6)

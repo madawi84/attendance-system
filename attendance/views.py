@@ -1,6 +1,8 @@
-from django.shortcuts import render
+# attendance/views.py
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from .models import Location
 from .serializers import LocationSerializer, CheckInSerializer
 from users.permissions import IsHR          
@@ -17,16 +19,29 @@ class LocationCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsHR]
 
     def perform_create(self, serializer):
-        logger.debug(f'User: {self.request.user}')
-        logger.debug(f'Is Superuser: {self.request.user.is_superuser}')
-        logger.debug(f'User has company: {hasattr(self.request.user, "company")}')
-        
-        if hasattr(self.request.user, 'company') and self.request.user.company:
-            serializer.save(company=self.request.user.company)
-        else:
-            logger.error("This user does not have a company attached.")
-            # You can either raise an error, or handle gracefully
-            raise ValueError("Cannot create location: user is not assigned to any company.")
+        """
+        Create a Location with correct multi-tenant rules:
+
+        - Super admin (is_admin=True): can create a location for ANY company,
+        but must provide `company` in the request payload.
+        - Non-admin: must belong to a company; the location is forced to their company.
+        """
+        user = self.request.user
+
+        # Super admin path: allow specifying company explicitly
+        if getattr(user, "is_admin", False):
+            # If company not provided in request data, return a clean 400
+            if not serializer.validated_data.get("company"):
+                raise ValidationError({"company": "Super admin must provide a company when creating a location."})
+            serializer.save()
+            return
+
+        # Non-admin path: user must have a company
+        if not getattr(user, "company", None):
+            raise ValidationError({"company": "Cannot create location: user is not assigned to any company."})
+
+        # Force company to the user's company (prevents cross-company creation)
+        serializer.save(company=user.company)
 
 # ────────────────────────────────────────────────────────────────
 # Employee check-in
